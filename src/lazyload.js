@@ -1,115 +1,99 @@
-/*!
- * Lazy Load Images without jQuery
- * http://ezyz.github.com/Lazy-Load-Images-without-jQuery/
- *
- * (c) 2012 Mike Pulaski. http://www.mikepulaski.com
- * Modified and maintained by Yifei Zhang. http://yifei.co
+/*
+ *  updated to:
+ *      - use jquery events with custom namespaces
+ *      - use jquery to select images, instead of custom document.querySelectorAll for IE7
+ *      - expose public methods
+ *      - be able to update image imagecache after an ajax call and skip images already in the imagecache
+ *      - expose configuration options
+ *  
+ *  adapted from:
+ *      Lazy Load Images without jQuery
+ *      http://ezyz.github.com/Lazy-Load-Images-without-jQuery/
+ *      
+ *      (c) 2012 Mike Pulaski. http://www.mikepulaski.com
+ *      Modified and maintained by Yifei Zhang. http://yifei.co
  */
 
-(function() {
-  var addEventListener =  window.addEventListener || function(n,f) { window.attachEvent('on'+n, f); },
-      removeEventListener = window.removeEventListener || function(n,f,b) { window.detachEvent('on'+n, f); };
+(function (window, document, $, undefined) {
 
-  var lazyLoader = {
-    cache: [],
-    mobileScreenSize: 500,
-    //tinyGif: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+  var imagecache = [];
 
-    addObservers: function() {
-      addEventListener('scroll', lazyLoader.throttledLoad);
-      addEventListener('resize', lazyLoader.throttledLoad);
+  function _addObservers () {
+    $(window).on('scroll.' + lazy.config.eventNamespace, $.throttle(lazy.config.throttle, lazy.load));
+    $(window).on('resize.' + lazy.config.eventNamespace, $.throttle(lazy.config.throttle, lazy.load));
+  }
+
+  function _removeObservers () {
+    $(window).off('scroll.' + lazy.config.eventNamespace);
+    $(window).off('resize.' + lazy.config.eventNamespace);
+  }
+
+  var lazy = {
+
+    config: {
+      throttle: 50,
+      loadedClass: 'lazy-loaded',
+      imageAttribute: 'data-src',
+      eventNamespace: 'lazyload'
     },
 
-    removeObservers: function() {
-      removeEventListener('scroll', lazyLoader.throttledLoad, false);
-      removeEventListener('resize', lazyLoader.throttledLoad, false);
-    },
-
-    throttleTimer: new Date().getTime(),
-
-    throttledLoad: function() {
-      var now = new Date().getTime();
-      if ((now - lazyLoader.throttleTimer) >= 200) {
-        lazyLoader.throttleTimer = now;
-        lazyLoader.loadVisibleImages();
-      }
-    },
-
-    loadVisibleImages: function() {
-      var scrollY = window.pageYOffset || document.documentElement.scrollTop;
-      var pageHeight = window.innerHeight || document.documentElement.clientHeight;
-      var range = {
-        min: scrollY - 200,
-        max: scrollY + pageHeight + 200
-      };
+    load: function () {
+      var scrollY = window.pageYOffset || document.documentElement.scrollTop,
+        pageHeight = window.innerHeight || document.documentElement.clientHeight,
+        range = {
+          min: scrollY - (pageHeight / 2),
+          max: scrollY + pageHeight + (pageHeight / 2)
+        };
 
       var i = 0;
-      while (i < lazyLoader.cache.length) {
-        var image = lazyLoader.cache[i];
-        var imagePosition = getOffsetTop(image);
-        var imageHeight = image.height || 0;
+      while (i < imagecache.length) {
 
-        if ((imagePosition >= range.min - imageHeight) && (imagePosition <= range.max)) {
-          var mobileSrc = image.getAttribute('data-src-mobile');
+        var image = imagecache[i],
+          imagePosition = getOffsetTop(image),
+          imageHeight = image.height || 0,
+          alreadyLoaded = $(image).hasClass(lazy.config.loadedClass);
 
-          image.onload = function() {
-            this.className = 'lazy-loaded';
+        if ((imagePosition >= range.min - imageHeight) 
+          && (imagePosition <= range.max) 
+          && $(image).is(':visible') 
+          && !alreadyLoaded) {
+
+          image.onload = function () {
+            this.className = lazy.config.loadedClass;
           };
 
-          if (mobileSrc && screen.width <= lazyLoader.mobileScreenSize) {
-            image.src = mobileSrc;
-          }
-          else {
-            image.src = image.getAttribute('data-src');
-          }
-
-          image.removeAttribute('data-src');
-          image.removeAttribute('data-src-mobile');
-
-          lazyLoader.cache.splice(i, 1);
+          image.src = image.getAttribute(lazy.config.imageAttribute);
+          image.removeAttribute(lazy.config.imageAttribute);
+          imagecache.splice(i, 1);
+          continue;
+        } else if (alreadyLoaded) {
+          imagecache.splice(i, 1);
           continue;
         }
 
         i++;
       }
 
-      if (lazyLoader.cache.length === 0) {
-        lazyLoader.removeObservers();
+      if (imagecache.length === 0) {
+        _removeObservers();
       }
     },
 
-    init: function() {
-      // Patch IE7- (querySelectorAll)
-      if (!document.querySelectorAll) {
-        document.querySelectorAll = function(selector) {
-          var doc = document,
-              head = doc.documentElement.firstChild,
-              styleTag = doc.createElement('STYLE');
-          head.appendChild(styleTag);
-          doc.__qsaels = [];
-          styleTag.styleSheet.cssText = selector + "{x:expression(document.__qsaels.push(this))}";
-          window.scrollBy(0, 0);
-          return doc.__qsaels;
+    init: function (options) {
+
+      lazy.config = $.extend({}, lazy.config, options);
+
+      var images = $.makeArray($('img[' + lazy.config.imageAttribute + ']'));
+
+      for (var i = 0, l = images.length; i < l; i++) {
+        var img = images[i];
+        if ( $.inArray(img, imagecache) === -1) {
+          imagecache.push(img);
         }
       }
 
-      addEventListener('load', function _lazyLoaderInit() {
-        var imageNodes = document.querySelectorAll('img[data-src]');
-
-        for (var i = 0; i < imageNodes.length; i++) {
-          var imageNode = imageNodes[i];
-
-          // Add a placeholder if one doesn't exist
-          //imageNode.src = imageNode.src || lazyLoader.tinyGif;
-
-          lazyLoader.cache.push(imageNode);
-        }
-
-        lazyLoader.addObservers();
-        lazyLoader.loadVisibleImages();
-
-        removeEventListener('load', _lazyLoaderInit, false);
-      });
+      _addObservers();
+      lazy.load();
     }
   }
 
@@ -125,5 +109,6 @@
     }
   }
 
-  lazyLoader.init();
-})();
+  window.lazy = lazy;
+
+})(window, document, jQuery);
