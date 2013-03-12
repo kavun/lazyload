@@ -1,13 +1,13 @@
-### Lazyload
+# Lazyload
 
 Lazy load your images. Tested on IE7+, Firefox, Chrome, iOS. Supports handling of images that are placed in the DOM after ajax requests or images that are made visible after the page loads.
 
-# Dependencies
+### Dependencies
 
 - [jQuery](http://jquery.com/)
 - [Ben Alman's Throttle/Debounce jQuery plugin](http://benalman.com/projects/jquery-throttle-debounce-plugin/)
 
-# Usage
+### Usage
 
 1) Include `lazyload.js`
 
