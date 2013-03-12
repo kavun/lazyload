@@ -1,35 +1,23 @@
-# About
+### Lazyload
 
-Lazy load your images without the overhead of a framework. Tested on IE7+, Firefox, Chrome, iOS.
+Lazy load your images. Tested on IE7+, Firefox, Chrome, iOS. Supports handling of images that are placed in the DOM after ajax requests or images that are made visible after the page loads.
 
-Original code from [Mike Pulaski](http://www.mikepulaski.com/code/2012/06/29/lazy-load-images-without-external-libraries/).
+# Dependencies
+
+- [jQuery](http://jquery.com/)
+- [Ben Alman's Throttle/Debounce jQuery plugin](http://benalman.com/projects/jquery-throttle-debounce-plugin/)
 
 # Usage
 
-1) Include `lazyload.js` or inline it.
+1) Include `lazyload.js`
 
-2) Add `.lazy-load` and `data-src` to each of your `<img>` tags. Optionally add a placeholder src, and a fallback image.
+2) Add `data-src` to each of your `<img>` tags. Optionally add a placeholder src, and the `lazy-load` class, however it is not necessary but can be used to animate the images.
 
 ```html
-<img class="lazy-load" data-src="lazy.jpg" data-src-mobile="lazy-small.jpg" src="blank.gif" />
+<img class="lazy-load" data-src="lazy.jpg" src="blank.gif" />
 <noscript><img src="lazy.jpg" /></noscript>
 ```
 
-3) Add CSS3 for an animated fade-in:
+3) Call `lazy.init()` after images are ready in the DOM. This method adds all images with the `data-src` attribute to a cache and `lazy.load()`'s them if the image `.is(':visible')`
 
-```css
-.lazy-load, .lazy-loaded {
-  -webkit-transition: opacity 0.3s;
-  -moz-transition: opacity 0.3s;
-  -ms-transition: opacity 0.3s;
-  -o-transition: opacity 0.3s;
-  transition: opacity 0.3s;
-  opacity: 0;
-}
-
-.lazy-loaded { opacity: 1; }
-```
-
-# Demo
-
-http://ezyz.github.com/Lazy-Load-Images-without-jQuery/
+4) If images are initially not visible, you can call `lazy.load()` when they become visiible.
